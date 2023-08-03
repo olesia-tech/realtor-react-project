@@ -7,7 +7,7 @@ export default function Header() {
 
   function pathMathRoute(route){
     if(route === location.pathname){
-      return true
+      return true;
     }
   };
   return (
