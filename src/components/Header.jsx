@@ -9,10 +9,10 @@ export default function Header() {
   const auth = getAuth();
 
   useEffect(() => {
-onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, (user) => {
   if(user){
     setPageState('Profile');
-  }else{
+  } else {
     setPageState('Sign in');
   }
 });
