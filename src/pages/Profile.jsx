@@ -1,13 +1,18 @@
 import { getAuth, updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import {FcHome} from 'react-icons/fc';
+import ListingItem from '../components/ListingItem';
+import { collection } from 'firebase/firestore';
+
 
 export default function Profile() {
 const auth = getAuth();
 const navigate = useNavigate();
 const[changeDetail, setChangeDetail] = useState(false);
+const [listings, setListings] = useState(null);
+const [loading, setLoading] = useState(true);
 const [formData, setFormData] = useState({
   name: auth.currentUser.displayName,
   email: auth.currentUser.email,
@@ -44,6 +49,32 @@ try {
   toast.error('Could not update the profile details');
 }
 }
+
+//This useEffect hook triggers when a new user logs in
+useEffect(() => {
+  async function fetchUserListings() {
+    const listingRef = collection(db, 'listings');
+    // Extract and structure the listing data from the query result
+      const q = query(
+      listingRef,
+      where('userRef', '==', auth.currentUser.uid),
+      orderBy('timestamp', 'desc')//This sorts the results based on the timestamp field in descending order. This means you'll get the newest listings first.
+    );
+    // Execute the query to get the listings.
+    const querySnap = await getDocs(q);//getDocs is a function provided by Firebase's Firestore library to retrieve the results 
+    // Extract and structure the listing data from the query result.
+    let listings = [];
+    querySnap.forEach((doc)=> {
+      return listings.push({
+        id: doc.id,
+        data: doc.data(),
+      });
+    });
+    setListings(listings);
+    setLoading(false);
+  }
+  fetchUserListings();
+}, [auth.currentUser.uid]); 
 
   return (
     <>
@@ -102,6 +133,22 @@ try {
           </button>
         </div>
     </section>
+    <div className='max-w-6xl px-3 mt-6 mx-auto'>
+      {!loading && listings.length > 0 && (
+        <>
+        <h2 className='text-2xl text-center font-semibold'>My Listing</h2>
+        <ul>
+          {listings.map((listing) => (
+            <ListingItem
+            key={listing.id}
+            id={listing.id}
+            listing={listing.data}
+            />
+          ))}
+        </ul>
+        </>
+      )}
+    </div>
     </>
   );
 }
