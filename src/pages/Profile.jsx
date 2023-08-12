@@ -1,10 +1,20 @@
 import { getAuth, updateProfile } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import {
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from "react-toastify";
 import {FcHome} from 'react-icons/fc';
 import ListingItem from '../components/ListingItem';
-import { collection } from 'firebase/firestore';
+import {collection } from 'firebase/firestore';
+import { db } from "../firebase";
 
 
 export default function Profile() {
@@ -136,8 +146,9 @@ useEffect(() => {
     <div className='max-w-6xl px-3 mt-6 mx-auto'>
       {!loading && listings.length > 0 && (
         <>
-        <h2 className='text-2xl text-center font-semibold'>My Listing</h2>
-        <ul>
+        <h2 className='text-2xl text-center font-semibold mb-6'>
+          My Listing</h2>
+        <ul className='sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl-grid-cols-5 mt-6 mb-6'>
           {listings.map((listing) => (
             <ListingItem
             key={listing.id}
