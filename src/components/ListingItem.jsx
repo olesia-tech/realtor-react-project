@@ -5,9 +5,12 @@ import {MdLocationOn} from 'react-icons/md';
 import {FaTrash} from 'react-icons/fa';
 import {MdEdit} from 'react-icons/md';
 
+//component that renders a single listing item.
 export default function ListingItem({listing, id, onEdit, onDelete}) {
   return (
+    // The container for the listing item.
     <li className='relative bg-white flex-col justify-between items-center shadow-md hover:shadow-xl rounded-md overflow-hidden transition-shadow duration-150 m-[10px]'>
+       {/* Link to the detailed view of the listing. */}
       <Link className='content' to={`/category/${listing.type}/${id}`}>
         <img className='h-[170px] w-full object-cover hover:scale-105 transition-scale duration-200 ease-in' 
         loading='lazy'
@@ -17,6 +20,7 @@ export default function ListingItem({listing, id, onEdit, onDelete}) {
         >
           {listing.timestamp?.toDate()}
         </Moment>
+        {/* Details of the listing. */}
         <div className='w-full p-[10px]'>
           <div className='flex items-center space-x-1'>
           <MdLocationOn className='h-4 w-4 text-green-600' />
@@ -37,10 +41,10 @@ export default function ListingItem({listing, id, onEdit, onDelete}) {
             <div className='flex items-center mt-[10px] space-x-3'>
               <div className='flex items-center space-x-1'>
                 <p className='font-bold text-xs'>
-                  {listing.bedrooms > 1 ? `{listing.bedrooms} Beds` : '1 Bed'}</p>
+                  {listing.bedrooms > 1 ? `${listing.bedrooms} Beds` : '1 Bed'}</p>
                 <div>
                   <p className='font-bold text-xs'>
-                    {listing.bathrooms > 1 ? `listing.bathrooms Baths` : '1 Bath'}</p>
+                    {listing.bathrooms > 1 ? `${listing.bathrooms} Baths` : '1 Bath'}</p>
                 </div>
               </div>
             </div>
