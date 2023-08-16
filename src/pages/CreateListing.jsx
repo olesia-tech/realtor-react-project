@@ -14,10 +14,11 @@ import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
 
 export default function CreateListing() {
-  const navigate = useNavigate();
-  const auth = getAuth();
+  const navigate = useNavigate(); // Hook to navigate between routes
+  const auth = getAuth(); // Firebase authentication
   const [geolocationEnabled, setGeolocationEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
+  // Initial form data for creating a listing
   const [formData, setFormData] = useState({
     type: "rent",
     name: "",
@@ -34,6 +35,7 @@ export default function CreateListing() {
     longitude: 0,
     images: {},
   });
+  // Destructure properties from formData for easier use
   const {
     type,
     name,
@@ -50,6 +52,8 @@ export default function CreateListing() {
     longitude,
     images,
   } = formData;
+
+  // Handle changes in form inputs
   function onChange(e) {
     let boolean = null;
     if (e.target.value === "true") {
@@ -73,10 +77,11 @@ export default function CreateListing() {
       }));
     }
   }
+  // Submit the form to create a new listing
   async function onSubmit(e) {
     e.preventDefault();
     setLoading(true);
-    let geolocation = {lat: 0, lng: 0 };
+    let geolocation = {lat: 0, lng: 0 }; // Default geolocation
     let location;
     if (+discountedPrice >= +regularPrice) {
       setLoading(false);
@@ -88,7 +93,7 @@ export default function CreateListing() {
       toast.error("maximum 6 images are allowed");
       return;
     }
-   
+    // If geolocation is enabled, fetch coordinates using Google Maps API
     if (geolocationEnabled) {
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${import.meta.env.VITE_REACT_APP_GEOCODE_API_KEY}`
@@ -119,20 +124,29 @@ export default function CreateListing() {
       geolocation.lng = longitude;
     }
 
-
+    //function to upload images to storage and get their URLs
     async function storeImage(image) {
       return new Promise((resolve, reject) => {
+        // Initializes Firebase storage
         const storage = getStorage();
+        // Create a unique filename
         const filename = `${auth.currentUser.uid}-${image.name}-${uuidv4()}`;
+        // Create a reference to the location in Firebase storage where 
+        // the file will be stored.
         const storageRef = ref(storage, filename);
+            // Start the process to upload the image in a resumable manner. 
+           // This means if the upload gets interrupted, it can be resumed later.
         const uploadTask = uploadBytesResumable(storageRef, image);
+         // Add an event listener for the 'state_changed' event on the upload task.
+         // This allows monitoring of the upload's progress and handling different upload states.
         uploadTask.on(
           "state_changed",
           (snapshot) => {
-            // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+           // Calculate the upload progress as a percentage.
             const progress =
               (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
             console.log("Upload is " + progress + "% done");
+            // Check the current state of the upload to log its status.
             switch (snapshot.state) {
               case "paused":
                 console.log("Upload is paused");
@@ -156,7 +170,7 @@ export default function CreateListing() {
         );
       });
     }
-
+    // Upload all images and get their URLs
     const imgUrls = await Promise.all(
       [...images].map((image) => storeImage(image))
     ).catch((error) => {
@@ -165,6 +179,7 @@ export default function CreateListing() {
       return;
     });
 
+    // Prepare the data for saving to the database
     const formDataCopy = {
       ...formData,
       imgUrls,
@@ -172,11 +187,14 @@ export default function CreateListing() {
       timestamp: serverTimestamp(),
       userRef: auth.currentUser.uid,
     };
+    // Clean up the data copy
     delete formDataCopy.images;
     !formDataCopy.offer && delete formDataCopy.discountedPrice;
     delete formDataCopy.latitude;
     delete formDataCopy.longitude;
+    // Save the listing to Firebase
     const docRef = await addDoc(collection(db, "listings"), formDataCopy);
+    // Update UI and navigate to the created listing
     setLoading(false);
     toast.success("Listing created");
     navigate(`/category/${formDataCopy.type}/${docRef.id}`);

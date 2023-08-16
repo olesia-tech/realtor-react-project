@@ -9,12 +9,21 @@ import {
 } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 import { v4 as uuidv4 } from "uuid";
-import { doc, getDoc, collection, serverTimestamp, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { useNavigate, useParams } from "react-router-dom";
 
+
 export default function CreateListing() {
+  // Hook to navigate between routes.
   const navigate = useNavigate();
+  // Getting authentication details.
   const auth = getAuth();
   const [geolocationEnabled, setGeolocationEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -52,35 +61,36 @@ export default function CreateListing() {
     images,
   } = formData;
 
+  // Get route parameters (like listingId).
   const params = useParams();
 
-  useEffect(()=> {
-    if(listing && listing.userRef !== auth.currentUser.uid){
-      toast.error("You can't edit this listing")
-      navigate('/')
+  // Effect hook to ensure the current user has rights to edit the listing.
+  useEffect(() => {
+    if (listing && listing.userRef !== auth.currentUser.uid) {
+      toast.error("You can't edit this listing");
+      navigate("/");
     }
-  },[auth.currentUser.uid, listing, navigate]);
-  
+  }, [auth.currentUser.uid, listing, navigate]);
 
-useEffect(()=> {
-setLoading(true);
-async function fetchListing(){
-const docRef = doc(db, 'listings', params.listingID)
-const docSnap = await getDoc(docRef);
-if(docSnap.exists()){
-  setListing(docSnap.data());
-  setFormData({...docSnap.data()});
-  setLoading(false);
-} else {
-  navigate('/');
-  toast.error('Listing does not exist');
-}
-}
-fetchListing();
-},[navigate,params.listingID]);
+  // Effect hook to fetch listing details based on the provided listingId.
+  useEffect(() => {
+    setLoading(true);
+    async function fetchListing() {
+      const docRef = doc(db, "listings", params.listingId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setListing(docSnap.data());
+        setFormData({ ...docSnap.data() });
+        setLoading(false);
+      } else {
+        navigate("/");
+        toast.error("Listing does not exist");
+      }
+    }
+    fetchListing();
+  }, [navigate, params.listingId]);
 
-
-
+  // Function to handle changes in the form inputs.
   function onChange(e) {
     let boolean = null;
     if (e.target.value === "true") {
@@ -89,14 +99,14 @@ fetchListing();
     if (e.target.value === "false") {
       boolean = false;
     }
-    // Files
+    // Handle file inputs.
     if (e.target.files) {
       setFormData((prevState) => ({
         ...prevState,
         images: e.target.files,
       }));
     }
-    // Text/Boolean/Number
+    // Handle all other input types.
     if (!e.target.files) {
       setFormData((prevState) => ({
         ...prevState,
@@ -104,11 +114,12 @@ fetchListing();
       }));
     }
   }
+
+  // Function to handle form submission.
   async function onSubmit(e) {
     e.preventDefault();
     setLoading(true);
-    let geolocation = {lat: 0, lng: 0 };
-    let location;
+
     if (+discountedPrice >= +regularPrice) {
       setLoading(false);
       toast.error("Discounted price needs to be less than regular price");
@@ -119,18 +130,25 @@ fetchListing();
       toast.error("maximum 6 images are allowed");
       return;
     }
-   
+    // Default geolocation.
+    let geolocation = { lat: 0, lng: 0 };
+    let location;
+    // Fetch and set geolocation based on the provided address.
     if (geolocationEnabled) {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${import.meta.env.VITE_REACT_APP_GEOCODE_API_KEY}`
-    );
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${
+          import.meta.env.VITE_REACT_APP_GEOCODE_API_KEY
+        }`
+      );
       const data = await response.json();
       console.log(data);
-
-      if (!response.ok || data.status === "REQUEST_DENIED" || data.status === "INVALID_REQUEST") {
+      // Error handling for geolocation fetch.
+      if (
+        !response.ok ||
+        data.status === "REQUEST_DENIED" ||
+        data.status === "INVALID_REQUEST"
+      ) {
         setLoading(false);
-    
-        
         toast.error("Error fetching location data");
         return;
       }
@@ -138,18 +156,18 @@ fetchListing();
       geolocation.lng = data.results[0]?.geometry.location.lng ?? 0;
 
       location = data.status === "ZERO_RESULTS" && undefined;
-      console.log(data.status); 
+      console.log(data.status);
 
       if (location === undefined) {
         setLoading(false);
         toast.error("please enter a correct address");
         return;
       }
+      // If geolocation is not enabled, use manually provided latitude and longitude.
     } else {
       geolocation.lat = latitude;
       geolocation.lng = longitude;
     }
-
 
     async function storeImage(image) {
       return new Promise((resolve, reject) => {
@@ -179,7 +197,6 @@ fetchListing();
           },
           () => {
             // Handle successful uploads on complete
-            
             getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
               resolve(downloadURL);
             });
@@ -188,28 +205,35 @@ fetchListing();
       });
     }
 
+    // Upload all images to storage and return their URLs.
     const imgUrls = await Promise.all(
-      [...images].map((image) => storeImage(image))
+      [...images].map((image) => storeImage(image)) // Map each image to a storage function.
     ).catch((error) => {
       setLoading(false);
       toast.error("Images not uploaded");
       return;
     });
 
+    // Create a copy of the form data with additional fields for the database.
     const formDataCopy = {
-      ...formData,
-      imgUrls,
-      geolocation,
-      timestamp: serverTimestamp(),
-      userRef: auth.currentUser.uid,
+      ...formData, // Copy all the form data.
+      imgUrls, // Add the image URLs.
+      geolocation, // Add the geolocation data.
+      timestamp: serverTimestamp(), // Set the current timestamp.
+      userRef: auth.currentUser.uid, // Add the user reference (ID of the current user).
     };
+
+    // Clean up the form data copy before saving to the database.
     delete formDataCopy.images;
     !formDataCopy.offer && delete formDataCopy.discountedPrice;
     delete formDataCopy.latitude;
     delete formDataCopy.longitude;
 
-    const docRef = doc(db, "listings", params.listingID);
+    // Get the reference to the document in the database using the listing ID.
+    const docRef = doc(db, "listings", params.listingId);
+    // Update the document in the database with the cleaned-up form data.
     await updateDoc(docRef, formDataCopy);
+    // Update the UI after the database operation.
     setLoading(false);
     toast.success("Listing Edited");
     navigate(`/category/${formDataCopy.type}/${docRef.id}`);
@@ -488,4 +512,4 @@ fetchListing();
       </form>
     </main>
   );
-                }
+}

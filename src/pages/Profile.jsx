@@ -87,17 +87,17 @@ useEffect(() => {
 }, [auth.currentUser.uid]); 
 
 //Deletes a listing from the database based on its ID.
-async function onDelete(listingID){
+async function onDelete(listingId){
 if(window.confirm('Are you sure you want to delete?')){
-  await deleteDoc(doc(db, 'listings', listingID));
+  await deleteDoc(doc(db, 'listings', listingId));
   // Update the local listings state by filtering out the deleted listing.
-  const updatedListings = listings.filter((listing) => listing.id !== listingID);
+  const updatedListings = listings.filter((listing) => listing.id !== listingId);
   setListings(updatedListings);
   toast.success('Successfully deleted the listing');
 }
 }
-function onEdit(listingID){
-  navigate(`/edit-listing/${listingID}`);
+function onEdit(listingId){
+  navigate(`/edit-listing/${listingId}`);
 }
 
   return (
